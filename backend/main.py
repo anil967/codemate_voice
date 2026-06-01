@@ -753,23 +753,33 @@ async def verify_api_key(request: Request, key: str = Depends(api_key_header)):
 # ─── Twilio Webhook Endpoints ─────────────────────────────────────────
 
 @app.post("/incoming-call")
+@app.get("/incoming-call")
 async def incoming_call(request: Request):
     """
     Twilio webhook for incoming calls.
     Returns TwiML that instructs Twilio to stream audio to our WebSocket endpoint.
+    Supports both GET and POST requests.
     """
-    _debug_write("[WEBHOOK] >>> /incoming-call HIT!")
-    print("[WEBHOOK] >>> /incoming-call HIT!", flush=True)
-    logger.info("[WEBHOOK] /incoming-call received!")
+    _debug_write(f"[WEBHOOK] >>> /incoming-call HIT! Method: {request.method}")
+    print(f"[WEBHOOK] >>> /incoming-call HIT! Method: {request.method}", flush=True)
+    logger.info(f"[WEBHOOK] /incoming-call received via {request.method}!")
     from twilio.twiml.voice_response import VoiceResponse
     
     # Use Config helper for proper URL formatting
     base_url = Config.get_external_url()
     ws_url = base_url.replace("https://", "wss://").replace("http://", "ws://")
     
-    # Extract customer's phone number from the inbound call form data
-    form_data = await request.form()
-    customer_phone = form_data.get("From", "")
+    # Extract customer's phone number from form data (POST) or query params (GET)
+    customer_phone = ""
+    if request.method == "POST":
+        try:
+            form_data = await request.form()
+            customer_phone = form_data.get("From", "")
+        except Exception as e:
+            logger.warning(f"Could not parse form data: {e}")
+            
+    if not customer_phone:
+        customer_phone = request.query_params.get("From", "")
     
     response = VoiceResponse()
     response.say("Connecting you to our AI assistant. Please wait.")
@@ -939,22 +949,32 @@ async def _trigger_outbound_call(phone_number: str, contact_id: str | None = Non
 
 
 @app.post("/outbound-call-twiml")
+@app.get("/outbound-call-twiml")
 async def outbound_call_twiml(request: Request):
     """
     TwiML for outbound calls — no say() greeting, Gemini handles that directly.
+    Supports both GET and POST requests.
     """
-    _debug_write("[WEBHOOK] >>> /outbound-call-twiml HIT!")
-    print("[WEBHOOK] >>> /outbound-call-twiml HIT!", flush=True)
-    logger.info("[WEBHOOK] /outbound-call-twiml received!")
+    _debug_write(f"[WEBHOOK] >>> /outbound-call-twiml HIT! Method: {request.method}")
+    print(f"[WEBHOOK] >>> /outbound-call-twiml HIT! Method: {request.method}", flush=True)
+    logger.info(f"[WEBHOOK] /outbound-call-twiml received via {request.method}!")
     from twilio.twiml.voice_response import VoiceResponse
 
     # Use Config helper for proper URL formatting
     base_url = Config.get_external_url()
     ws_url = base_url.replace("https://", "wss://").replace("http://", "ws://")
 
-    # Extract customer's phone number from the outbound call form data
-    form_data = await request.form()
-    customer_phone = form_data.get("To", "")
+    # Extract customer's phone number from form data (POST) or query params (GET)
+    customer_phone = ""
+    if request.method == "POST":
+        try:
+            form_data = await request.form()
+            customer_phone = form_data.get("To", "")
+        except Exception as e:
+            logger.warning(f"Could not parse form data: {e}")
+            
+    if not customer_phone:
+        customer_phone = request.query_params.get("To", "")
 
     response = VoiceResponse()
     connect = response.connect()
