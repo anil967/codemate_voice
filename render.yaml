@@ -1,19 +1,26 @@
 services:
-  # 1. Backend FastAPI Service
+  # Single Web Service — FastAPI serves both API and React frontend
   - type: web
-    name: voco-voice-backend
+    name: codemate-voice
     env: python
-    region: singapore   # change to your preferred region
-    plan: starter       # use 'free' only for testing (cold starts)
+    region: singapore     # change to: oregon, frankfurt, ohio as needed
+    plan: starter
     rootDirectory: backend
-    buildCommand: pip install -r requirements.txt
+    buildCommand: >
+      cd ../frontend &&
+      npm install &&
+      npm run build &&
+      mkdir -p ../backend/static &&
+      cp -r build/. ../backend/static/ &&
+      cd ../backend &&
+      pip install -r requirements.txt
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     envVars:
       # ── Required ────────────────────────────────────────────────────
       - key: GOOGLE_API_KEY
-        sync: false                   # Set in Render Dashboard → Environment
+        sync: false
       - key: MONGO_URI
-        sync: false                   # MongoDB Atlas connection string
+        sync: false
       - key: MONGO_DB_NAME
         value: voco_voice
 
@@ -25,11 +32,11 @@ services:
       - key: TWILIO_PHONE_NUMBER
         sync: false
       - key: TWILIO_WHATSAPP_NUMBER
-        sync: false                   # e.g. whatsapp:+14155238886
+        sync: false
 
-      # ── WhatsApp / Meta (leave blank if using Twilio) ───────────────
+      # ── WhatsApp Provider ────────────────────────────────────────────
       - key: WHATSAPP_PROVIDER
-        value: twilio                 # "twilio" or "meta"
+        value: twilio
       - key: META_WHATSAPP_ACCESS_TOKEN
         sync: false
       - key: META_WHATSAPP_PHONE_NUMBER_ID
@@ -47,7 +54,7 @@ services:
       - key: GEMINI_THINKING
         value: minimal
 
-      # ── Zoho CRM (leave blank to disable) ───────────────────────────
+      # ── Zoho CRM (optional) ──────────────────────────────────────────
       - key: ZOHO_CLIENT_ID
         sync: false
       - key: ZOHO_CLIENT_SECRET
@@ -57,32 +64,20 @@ services:
       - key: ZOHO_ORG_DOMAIN
         value: https://www.zohoapis.in
 
-      # ── Server / CORS ───────────────────────────────────────────────
-      # After first deploy, set EXTERNAL_URL to:  https://voco-voice-backend.onrender.com
-      # and ALLOWED_ORIGINS to:                   https://voco-voice-frontend.onrender.com
+      # ── Server ──────────────────────────────────────────────────────
+      # Set EXTERNAL_URL to:  https://codemate-voice.onrender.com
+      # Set ALLOWED_ORIGINS to: https://codemate-voice.onrender.com
       - key: EXTERNAL_URL
-        sync: false
+        value: https://codemate-voice.onrender.com
       - key: ALLOWED_ORIGINS
-        sync: false
+        value: https://codemate-voice.onrender.com
 
       # ── Optional ────────────────────────────────────────────────────
       - key: API_KEY
-        sync: false                   # leave empty to disable endpoint auth
+        sync: false
       - key: MAX_CONCURRENT_CALLS
         value: "5"
       - key: MAX_APPOINTMENTS_PER_DAY
         value: "5"
       - key: PYTHONUNBUFFERED
         value: "1"
-
-  # 2. Frontend React Static Site
-  - type: web
-    name: voco-voice-frontend
-    env: static
-    rootDirectory: frontend
-    buildCommand: npm install && npm run build
-    staticPublishPath: build
-    envVars:
-      # After first deploy copy the backend service URL here
-      - key: REACT_APP_BACKEND_URL
-        sync: false                   # e.g. https://voco-voice-backend.onrender.com

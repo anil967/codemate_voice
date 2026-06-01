@@ -3578,6 +3578,17 @@ async def handle_whatsapp_status(request: Request):
     return Response(status_code=200)
 
 
+# ─── Serve React Frontend (must be last — catches all unmatched routes) ───────
+
+_static_dir = os.path.join(os.path.dirname(__file__), "static")
+if os.path.exists(_static_dir):
+    from fastapi.staticfiles import StaticFiles
+    app.mount("/", StaticFiles(directory=_static_dir, html=True), name="frontend")
+    logger.info(f"[STATIC] Serving React frontend from: {_static_dir}")
+else:
+    logger.warning("[STATIC] 'static/' folder not found — frontend not served. Run the build first.")
+
+
 # ─── Main Entry Point ─────────────────────────────────────────────────
 
 if __name__ == "__main__":
