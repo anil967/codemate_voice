@@ -1,83 +1,113 @@
 services:
-  # Single Web Service — FastAPI serves both API and React frontend
   - type: web
-    name: codemate-voice
+    name: codemate-voice          # ← Change this to your preferred service name
     env: python
-    region: singapore     # change to: oregon, frankfurt, ohio as needed
-    plan: starter
+    region: singapore             # Options: oregon, frankfurt, ohio, singapore
+    plan: starter                 # Use 'free' only for testing (cold starts break calls)
     rootDirectory: backend
-    buildCommand: >
-      cd ../frontend &&
-      npm install &&
-      npm run build &&
-      mkdir -p ../backend/static &&
-      cp -r build/. ../backend/static/ &&
-      cd ../backend &&
+    buildCommand: |
+      cd ../frontend
+      npm install --legacy-peer-deps
+      npm run build
+      mkdir -p ../backend/static
+      cp -r build/. ../backend/static/
+      cd ../backend
       pip install -r requirements.txt
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+
     envVars:
-      # ── Required ────────────────────────────────────────────────────
+      # ─────────────────────────────────────────────
+      # REQUIRED — set these in Render Dashboard
+      # ─────────────────────────────────────────────
       - key: GOOGLE_API_KEY
         sync: false
+
       - key: MONGO_URI
-        sync: false
+        sync: false               # MongoDB Atlas: mongodb+srv://user:pass@cluster.mongodb.net/
+
       - key: MONGO_DB_NAME
         value: voco_voice
 
-      # ── Twilio ──────────────────────────────────────────────────────
+      # ─────────────────────────────────────────────
+      # TWILIO
+      # ─────────────────────────────────────────────
       - key: TWILIO_ACCOUNT_SID
         sync: false
+
       - key: TWILIO_AUTH_TOKEN
         sync: false
-      - key: TWILIO_PHONE_NUMBER
-        sync: false
-      - key: TWILIO_WHATSAPP_NUMBER
-        sync: false
 
-      # ── WhatsApp Provider ────────────────────────────────────────────
+      - key: TWILIO_PHONE_NUMBER
+        sync: false               # E.164 format: +14155551234
+
+      - key: TWILIO_WHATSAPP_NUMBER
+        sync: false               # e.g. whatsapp:+14155238886
+
+      # ─────────────────────────────────────────────
+      # WHATSAPP PROVIDER  ("twilio" or "meta")
+      # ─────────────────────────────────────────────
       - key: WHATSAPP_PROVIDER
         value: twilio
+
       - key: META_WHATSAPP_ACCESS_TOKEN
         sync: false
+
       - key: META_WHATSAPP_PHONE_NUMBER_ID
         sync: false
+
       - key: META_WHATSAPP_PHONE_NUMBER
         sync: false
 
-      # ── Gemini ──────────────────────────────────────────────────────
+      # ─────────────────────────────────────────────
+      # GEMINI
+      # ─────────────────────────────────────────────
       - key: GEMINI_MODEL
         value: gemini-2.0-flash-live-001
+
       - key: GEMINI_TEXT_MODEL
         value: gemini-2.5-flash
+
       - key: GEMINI_VOICE
         value: Erinome
+
       - key: GEMINI_THINKING
         value: minimal
 
-      # ── Zoho CRM (optional) ──────────────────────────────────────────
+      # ─────────────────────────────────────────────
+      # ZOHO CRM  (optional — leave blank to disable)
+      # ─────────────────────────────────────────────
       - key: ZOHO_CLIENT_ID
         sync: false
+
       - key: ZOHO_CLIENT_SECRET
         sync: false
+
       - key: ZOHO_REFRESH_TOKEN
         sync: false
+
       - key: ZOHO_ORG_DOMAIN
         value: https://www.zohoapis.in
 
-      # ── Server ──────────────────────────────────────────────────────
-      # Set EXTERNAL_URL to:  https://codemate-voice.onrender.com
-      # Set ALLOWED_ORIGINS to: https://codemate-voice.onrender.com
+      # ─────────────────────────────────────────────
+      # SERVER — update with YOUR Render URL after deploy
+      # ─────────────────────────────────────────────
       - key: EXTERNAL_URL
-        value: https://codemate-voice.onrender.com
-      - key: ALLOWED_ORIGINS
-        value: https://codemate-voice.onrender.com
+        value: https://codemate-voice.onrender.com   # ← your Render URL
 
-      # ── Optional ────────────────────────────────────────────────────
+      - key: ALLOWED_ORIGINS
+        value: https://codemate-voice.onrender.com   # ← same URL
+
+      # ─────────────────────────────────────────────
+      # OPTIONAL
+      # ─────────────────────────────────────────────
       - key: API_KEY
-        sync: false
+        sync: false               # leave empty to disable auth
+
       - key: MAX_CONCURRENT_CALLS
         value: "5"
+
       - key: MAX_APPOINTMENTS_PER_DAY
         value: "5"
+
       - key: PYTHONUNBUFFERED
         value: "1"

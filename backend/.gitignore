@@ -43,6 +43,8 @@ htmlcov/
 dist/
 build/
 *.egg-info/
+# Do NOT ignore static/ — it holds the React frontend build copied at deploy time
+!static/
 
 # Temporary files
 *.tmp
