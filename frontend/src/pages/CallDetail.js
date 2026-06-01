@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useParams, useLocation, useNavigate } from "react-router-dom"
+import { BACKEND_URL } from "../api"
 import {
   LineChart,
   Line,
@@ -55,7 +56,7 @@ const CallDetail = () => {
   const phoneNumber = location.state?.phoneNumber || "Unknown"
   const sentiment = location.state?.sentiment || "neutral"
 
-  const backendUrl = (process.env.REACT_APP_BACKEND_URL || "http://localhost:5000").replace(/\/$/, "")
+  const backendUrl = BACKEND_URL
 
   const callStorageKey = (id) => `voco_call_${id}`
   const callIndexKey = "voco_call_index"

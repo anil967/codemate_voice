@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { BACKEND_URL } from "./api"
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom"
 import Navbar from "./components/Navbar"
 import Dashboard from "./pages/Dashboard"
@@ -14,7 +15,7 @@ import Properties from "./pages/Properties"
 import Appointments from "./pages/Appointments"
 import "./App.css"
 
-const backendUrl = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
+const backendUrl = BACKEND_URL;
 
 function App() {
   const [theme, setTheme] = useState("dark")

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { BACKEND_URL } from "../api"
 import "./Appointments.css"
 
 const Appointments = () => {
@@ -27,7 +28,7 @@ const Appointments = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const backendUrl = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000"
+  const backendUrl = BACKEND_URL
   const apiKey = process.env.REACT_APP_API_KEY || ""
 
   const fetchAppointments = async () => {

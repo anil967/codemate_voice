@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
+import { BACKEND_URL } from "../api"
 import {
   PieChart,
   Pie,
@@ -42,7 +43,7 @@ const Dashboard = () => {
   const [showAnalytics, setShowAnalytics] = useState(true)
   const [showPendingCalls, setShowPendingCalls] = useState(false)
 
-  const backendUrl = (process.env.REACT_APP_BACKEND_URL || "http://localhost:5000").replace(/\/$/, "")
+  const backendUrl = BACKEND_URL
 
   const fetchJson = async (url, options = {}) => {
     const response = await fetch(url, options)
