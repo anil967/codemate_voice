@@ -714,11 +714,38 @@ app.add_middleware(
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 
-async def verify_api_key(key: str = Depends(api_key_header)):
-    """Verify API key if configured. Skips auth when API_KEY is not set."""
+async def verify_api_key(request: Request, key: str = Depends(api_key_header)):
+    """Verify API key if configured. Skips auth when API_KEY is not set or request is same-origin."""
     if not Config.API_KEY:
         return True  # Auth disabled when no key configured
+
+    # Bypass auth for same-origin requests (e.g. from the React frontend running on same domain)
+    referer = request.headers.get("referer", "")
+    origin = request.headers.get("origin", "")
+    forwarded_host = request.headers.get("x-forwarded-host", "")
+    host = forwarded_host or request.headers.get("host", "")
+
+    is_same_origin = False
+    if host:
+        def get_host_without_port(h: str) -> str:
+            if not h:
+                return ""
+            h = h.split("://")[-1]
+            return h.split(":")[0].split("/")[0]
+
+        host_name = get_host_without_port(host)
+        referer_name = get_host_without_port(referer)
+        origin_name = get_host_without_port(origin)
+
+        if host_name and (host_name == referer_name or host_name == origin_name):
+            is_same_origin = True
+
+    if is_same_origin:
+        logger.info(f"Bypassing API key verification for same-origin request: {request.url.path}")
+        return True
+
     if key != Config.API_KEY:
+        logger.warning(f"Invalid API key for external request to {request.url.path} from {request.client.host if request.client else 'unknown'}")
         raise HTTPException(status_code=403, detail="Invalid API key")
     return True
 
