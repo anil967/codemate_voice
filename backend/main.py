@@ -765,8 +765,8 @@ async def incoming_call(request: Request):
     logger.info(f"[WEBHOOK] /incoming-call received via {request.method}!")
     from twilio.twiml.voice_response import VoiceResponse
     
-    # Use Config helper for proper URL formatting
-    base_url = Config.get_external_url()
+    # Use request.base_url to automatically use the correct host (Render or local)
+    base_url = str(request.base_url).rstrip("/")
     ws_url = base_url.replace("https://", "wss://").replace("http://", "ws://")
     
     # Extract customer's phone number from form data (POST) or query params (GET)
@@ -960,8 +960,8 @@ async def outbound_call_twiml(request: Request):
     logger.info(f"[WEBHOOK] /outbound-call-twiml received via {request.method}!")
     from twilio.twiml.voice_response import VoiceResponse
 
-    # Use Config helper for proper URL formatting
-    base_url = Config.get_external_url()
+    # Use request.base_url to automatically use the correct host (Render or local)
+    base_url = str(request.base_url).rstrip("/")
     ws_url = base_url.replace("https://", "wss://").replace("http://", "ws://")
 
     # Extract customer's phone number from form data (POST) or query params (GET)
