@@ -30,7 +30,7 @@ services:
       - key: META_WHATSAPP_PHONE_NUMBER
         sync: false
       - key: GEMINI_MODEL
-        value: gemini-2.0-flash-live-001
+        value: gemini-3.1-flash-live-preview
       - key: GEMINI_TEXT_MODEL
         value: gemini-2.5-flash
       - key: GEMINI_VOICE
