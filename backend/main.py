@@ -782,7 +782,7 @@ async def incoming_call(request: Request):
         customer_phone = request.query_params.get("From", "")
     
     response = VoiceResponse()
-    response.say("Connecting you to our AI assistant. Please wait.")
+    response.say("Connecting you to voco AI assistant. Please wait.")
     connect = response.connect()
     
     ws_url_with_phone = f"{ws_url}/ws/twilio"
