@@ -18,6 +18,7 @@ const Properties = () => {
     developer: "",
     location: "",
     city: "",
+    state: "",
     type: "2BHK",
     size_sqft: "",
     price: "",
@@ -79,6 +80,7 @@ const Properties = () => {
       developer: "",
       location: "",
       city: "",
+      state: "",
       type: "2BHK",
       size_sqft: "",
       price: "",
@@ -99,6 +101,7 @@ const Properties = () => {
       developer: property.developer || "",
       location: property.location || "",
       city: property.city || "",
+      state: property.state || "",
       type: property.type || "2BHK",
       size_sqft: property.size_sqft || "",
       price: property.price || "",
@@ -181,7 +184,7 @@ const Properties = () => {
       <div className="properties-filters">
         <input
           type="text"
-          placeholder="Search by location..."
+          placeholder="Search by location, city, state or project..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="search-input"
@@ -213,7 +216,7 @@ const Properties = () => {
               <div className="property-status">{property.status || "Available"}</div>
               <h3>{property.project_name}</h3>
               <div className="property-details">
-                <p className="property-location">📍 {property.location}</p>
+                <p className="property-location">📍 {property.location}, {property.city}{property.state ? `, ${property.state}` : ""}</p>
                 <p className="property-type">🏠 {property.type} • {property.size_sqft?.toLocaleString()} sq.ft</p>
                 <p className="property-price">💰 {property.price}</p>
                 {property.amenities && (
@@ -287,6 +290,16 @@ const Properties = () => {
                     value={formData.city}
                     onChange={handleInputChange}
                     required
+                  />
+                </div>
+                
+                <div className="form-group">
+                  <label>State</label>
+                  <input
+                    type="text"
+                    name="state"
+                    value={formData.state}
+                    onChange={handleInputChange}
                   />
                 </div>
 

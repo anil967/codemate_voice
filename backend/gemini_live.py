@@ -66,6 +66,7 @@ GET_PROPERTIES_DECLARATION = types.FunctionDeclaration(
         properties={
             "location": types.Schema(type="STRING", description="Specific location or area the customer is interested in (e.g., 'Whitefield', 'Andheri')"),
             "city": types.Schema(type="STRING", description="City name (e.g., 'Pune', 'Bangalore')"),
+            "state": types.Schema(type="STRING", description="State name (e.g., 'Maharashtra', 'Karnataka')"),
             "property_type": types.Schema(type="STRING", description="Property type preference (e.g., '2BHK', '3BHK', 'Villa', 'Plot')"),
             "budget_min": types.Schema(type="STRING", description="Minimum budget mentioned by customer (e.g., '50 Lakhs')"),
             "budget_max": types.Schema(type="STRING", description="Maximum budget mentioned by customer (e.g., '1 Crore')"),

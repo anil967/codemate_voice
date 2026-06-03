@@ -405,6 +405,7 @@ class PropertyRequest(BaseModel):
     developer: str | None = None
     location: str
     city: str
+    state: str | None = None
     type: str  # 1BHK, 2BHK, 3BHK, Villa, Plot
     size_sqft: int | None = None
     price: str
@@ -1966,7 +1967,7 @@ async def twilio_websocket(websocket: WebSocket):
                                         parsed_budget_max = parse_budget_to_number(budget_max) if budget_max else None
                                         
                                         # Build the search query with flexible matching
-                                        def build_query(loc=None, cit=None, ptype=None, include_project_name=True):
+                                        def build_query(loc=None, cit=None, ptype=None, include_project_name=True, st=None):
                                             """Build MongoDB query with flexible matching."""
                                             import re
                                             query = {}
@@ -1985,6 +1986,10 @@ async def twilio_websocket(websocket: WebSocket):
                                             # City matching (Strict)
                                             if cit:
                                                 query["city"] = {"$regex": cit.strip(), "$options": "i"}
+                                            
+                                            # State matching (Strict)
+                                            if st:
+                                                query["state"] = {"$regex": st.strip(), "$options": "i"}
                                             
                                             # Location/Project matching (Flexible OR)
                                             if loc:
@@ -2011,19 +2016,19 @@ async def twilio_websocket(websocket: WebSocket):
                                             
                                             return query
                                         
-                                        # Try strict search first (location + city + type + budget)
-                                        query = build_query(loc=location, cit=city, ptype=property_type)
+                                        # Try strict search first (location + city + state + type + budget)
+                                        query = build_query(loc=location, cit=city, ptype=property_type, st=state)
                                         
                                         properties_cursor = await asyncio.to_thread(
                                             lambda: list(db_conn.properties.find(query).limit(5))
                                         )
                                         properties = list(properties_cursor)
                                         
-                                        # Fallback 1: If no results, try broader search (loc/cit + type, no budget)
-                                        if not properties and (location or city):
+                                        # Fallback 1: If no results, try broader search (loc/cit/state + type, no budget)
+                                        if not properties and (location or city or state):
                                             logger.info("[TOOL] Strict search returned no results, trying broader search (no budget)...")
                                             # We use 'location or city' as loc to be broad
-                                            query_fallback = build_query(loc=location or city, ptype=property_type)
+                                            query_fallback = build_query(loc=location or city, ptype=property_type, st=state)
                                             # Explicitly remove budget filter if it was there
                                             if "price_value" in query_fallback:
                                                 del query_fallback["price_value"]
@@ -2034,9 +2039,9 @@ async def twilio_websocket(websocket: WebSocket):
                                             properties = list(properties_cursor)
                                         
                                         # Fallback 1.5: If still no results, try location/city-only search
-                                        if not properties and (location or city):
-                                            logger.info("[TOOL] Broader search returned no results, trying location/city-only search...")
-                                            query_loc_only = build_query(loc=location or city)
+                                        if not properties and (location or city or state):
+                                            logger.info("[TOOL] Broader search returned no results, trying location/city/state-only search...")
+                                            query_loc_only = build_query(loc=location or city, st=state)
                                             # Explicitly remove type and budget filters
                                             if "type" in query_loc_only:
                                                 del query_loc_only["type"]
@@ -2051,7 +2056,7 @@ async def twilio_websocket(websocket: WebSocket):
                                         # Fallback 2: If still no results, try just type search
                                         # only when no city/location was provided. This avoids
                                         # drifting into results from another city.
-                                        if not properties and property_type and not (location or city):
+                                        if not properties and property_type and not (location or city or state):
                                             logger.info("[TOOL] Broader search returned no results, trying type-only search...")
                                             import re
                                             match = re.search(r'(\d)\s*BHK', property_type, re.I)
@@ -2066,9 +2071,10 @@ async def twilio_websocket(websocket: WebSocket):
                                         if properties:
                                             formatted_props = []
                                             for prop in properties:
+                                                state_suffix = f", {prop.get('state')}" if prop.get('state') else ""
                                                 formatted_props.append(
                                                     f"• {prop.get('project_name', 'Unknown')} - {prop.get('type', 'N/A')} "
-                                                    f"in {prop.get('location', 'N/A')}, {prop.get('city', 'N/A')} "
+                                                    f"in {prop.get('location', 'N/A')}, {prop.get('city', 'N/A')}{state_suffix} "
                                                     f"at {prop.get('price', 'N/A')}."
                                                 )
                                             response_text = "\n".join(formatted_props)
@@ -3160,6 +3166,7 @@ async def get_properties(
     location: str = Query(""),
     property_type: str = Query(""),
     city: str = Query(""),
+    state: str = Query(""),
     auth: bool = Depends(verify_api_key),
 ):
     """
@@ -3172,11 +3179,18 @@ async def get_properties(
     
     query = {}
     if location:
-        query["location"] = {"$regex": location, "$options": "i"}
+        query["$or"] = [
+            {"location": {"$regex": location, "$options": "i"}},
+            {"city": {"$regex": location, "$options": "i"}},
+            {"state": {"$regex": location, "$options": "i"}},
+            {"project_name": {"$regex": location, "$options": "i"}},
+        ]
     if property_type:
         query["type"] = {"$regex": property_type, "$options": "i"}
     if city:
         query["city"] = {"$regex": city, "$options": "i"}
+    if state:
+        query["state"] = {"$regex": state, "$options": "i"}
     
     properties_cursor = await asyncio.to_thread(
         lambda: list(db.properties.find(query).sort("created_at", -1).limit(100))
@@ -3195,6 +3209,7 @@ async def search_properties(
     location: str = Query(""),
     property_type: str = Query(""),
     city: str = Query(""),
+    state: str = Query(""),
     budget_min: str = Query(""),
     budget_max: str = Query(""),
     auth: bool = Depends(verify_api_key),
@@ -3209,11 +3224,18 @@ async def search_properties(
     
     query = {}
     if location:
-        query["location"] = {"$regex": location, "$options": "i"}
+        query["$or"] = [
+            {"location": {"$regex": location, "$options": "i"}},
+            {"city": {"$regex": location, "$options": "i"}},
+            {"state": {"$regex": location, "$options": "i"}},
+            {"project_name": {"$regex": location, "$options": "i"}},
+        ]
     if property_type:
         query["type"] = property_type
     if city:
         query["city"] = {"$regex": city, "$options": "i"}
+    if state:
+        query["state"] = {"$regex": state, "$options": "i"}
     
     properties_cursor = await asyncio.to_thread(
         lambda: list(db.properties.find(query).limit(10))
@@ -3263,6 +3285,7 @@ async def create_property(
         "developer": property_data.developer,
         "location": property_data.location,
         "city": property_data.city,
+        "state": property_data.state,
         "type": property_data.type,
         "size_sqft": property_data.size_sqft,
         "price": property_data.price,
@@ -3304,6 +3327,7 @@ async def update_property(
         "developer": property_data.developer,
         "location": property_data.location,
         "city": property_data.city,
+        "state": property_data.state,
         "type": property_data.type,
         "size_sqft": property_data.size_sqft,
         "price": property_data.price,
@@ -3630,8 +3654,34 @@ async def handle_whatsapp_status(request: Request):
 _static_dir = os.path.join(os.path.dirname(__file__), "static")
 if os.path.exists(_static_dir):
     from fastapi.staticfiles import StaticFiles
-    app.mount("/", StaticFiles(directory=_static_dir, html=True), name="frontend")
-    logger.info(f"[STATIC] Serving React frontend from: {_static_dir}")
+    from starlette.exceptions import HTTPException as StarletteHTTPException
+    
+    class SPAStaticFiles(StaticFiles):
+        async def get_response(self, path: str, scope):
+            normalized_path = path.replace("\\", "/")
+            if (
+                normalized_path.startswith("api/")
+                or normalized_path.startswith("ws/")
+                or normalized_path.startswith("whatsapp/")
+                or normalized_path in ["incoming-call", "outbound-call-twiml", "whatsappincoming", "incoming"]
+            ):
+                raise StarletteHTTPException(status_code=404, detail="Not Found")
+                
+            try:
+                response = await super().get_response(path, scope)
+                if response.status_code == 404:
+                    return await super().get_response("index.html", scope)
+                return response
+            except StarletteHTTPException as e:
+                if e.status_code == 404:
+                    try:
+                        return await super().get_response("index.html", scope)
+                    except StarletteHTTPException:
+                        pass
+                raise e
+
+    app.mount("/", SPAStaticFiles(directory=_static_dir, html=True), name="frontend")
+    logger.info(f"[STATIC] Serving React SPA frontend from: {_static_dir}")
 else:
     logger.warning("[STATIC] 'static/' folder not found — frontend not served. Run the build first.")
 
